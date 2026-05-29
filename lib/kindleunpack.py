@@ -146,6 +146,9 @@ if PY2:
 #  0.84   Try to better follow the epub3 fixed layout spec when unpacking fixed layout mobis,
 #         and handle non-xml escaped titles in the ncx
 
+DRY = False
+""" Set to True not to write any files for confirmation of book structure. """
+
 DUMP = False
 """ Set to True to dump all possible information. """
 
@@ -201,11 +204,30 @@ from .mobi_pagemap import PageMapProcessor
 from .mobi_dict import dictSupport
 
 
+class dummy_io(object):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return
+
+    def write(self, data):
+        return
+
+
+def fopen(fpath, mode):
+    if not DRY or mode is None or mode[0].lower() == 'r':
+        f = open(fpath, mode)
+    else:
+        f = dummy_io()
+    return f
+
+
 def processSRCS(i, files, rscnames, sect, data):
     # extract the source zip archive and save it.
     print("File contains kindlegen source archive, extracting as %s" % KINDLEGENSRC_FILENAME)
     srcname = os.path.join(files.outdir, KINDLEGENSRC_FILENAME)
-    with open(pathof(srcname), 'wb') as f:
+    with fopen(pathof(srcname), 'wb') as f:
         f.write(data[16:])
     rscnames.append(None)
     sect.setsectiondescription(i,"Zipped Source Files")
@@ -233,7 +255,7 @@ def processPAGE(i, files, rscnames, sect, data, mh, pagemapproc):
         outname = os.path.join(files.outdir, 'mobi8-'+files.getInputFileBasename() + '.apnx')
     else:
         outname = os.path.join(files.outdir, 'mobi7-'+files.getInputFileBasename() + '.apnx')
-    with open(pathof(outname), 'wb') as f:
+    with fopen(pathof(outname), 'wb') as f:
         f.write(apnx_data)
     return rscnames, pagemapproc
 
@@ -242,7 +264,7 @@ def processCMET(i, files, rscnames, sect, data):
     # extract the build log
     print("File contains kindlegen build log, extracting as %s" % KINDLEGENLOG_FILENAME)
     srcname = os.path.join(files.outdir, KINDLEGENLOG_FILENAME)
-    with open(pathof(srcname), 'wb') as f:
+    with fopen(pathof(srcname), 'wb') as f:
         f.write(data[10:])
     rscnames.append(None)
     sect.setsectiondescription(i,"Kindlegen log")
@@ -296,7 +318,7 @@ def processFONT(i, files, rscnames, sect, data, obfuscate_data, beg, rsc_ptr):
             obfuscate_data.append(fontname + ext)
         fontname += ext
         outfnt = os.path.join(files.imgdir, fontname)
-        with open(pathof(outfnt), 'wb') as f:
+        with fopen(pathof(outfnt), 'wb') as f:
             f.write(font_data)
         rscnames.append(fontname)
         sect.setsectiondescription(i,"Font {0:s}".format(fontname))
@@ -318,7 +340,7 @@ def processCRES(i, files, rscnames, sect, data, beg, rsc_ptr, use_hd):
         if DUMP:
             fname = "unknown%05d.dat" % i
             outname= os.path.join(files.outdir, fname)
-            with open(pathof(outname), 'wb') as f:
+            with fopen(pathof(outname), 'wb') as f:
                 f.write(data)
             sect.setsectiondescription(i,"Mysterious CRES data, first four bytes %s extracting as %s" % (describe(data[0:4]), fname))
         rsc_ptr += 1
@@ -333,7 +355,7 @@ def processCRES(i, files, rscnames, sect, data, beg, rsc_ptr, use_hd):
         imgdest = files.hdimgdir
     print("Extracting HD image: {0:s} from section {1:d}".format(imgname,i))
     outimg = os.path.join(imgdest, imgname)
-    with open(pathof(outimg), 'wb') as f:
+    with fopen(pathof(outimg), 'wb') as f:
         f.write(data)
     rscnames.append(None)
     sect.setsectiondescription(i,"Optional HD Image {0:s}".format(imgname))
@@ -359,7 +381,7 @@ def processCONT(i, files, rscnames, sect, data):
             dump_contexth(cpage, contexth)
             fname = "CONT_Header%05d.dat" % i
             outname= os.path.join(files.outdir, fname)
-            with open(pathof(outname), 'wb') as f:
+            with fopen(pathof(outname), 'wb') as f:
                 f.write(data)
     return rscnames
 
@@ -383,7 +405,7 @@ def processRESC(i, files, rscnames, sect, data, k8resc):
         rescname = "RESC%05d.dat" % i
         print("Extracting Resource: ", rescname)
         outrsc = os.path.join(files.outdir, rescname)
-        with open(pathof(outrsc), 'wb') as f:
+        with fopen(pathof(outrsc), 'wb') as f:
             f.write(data)
     if True:  # try:
         # parse the spine and metadata from RESC
@@ -407,7 +429,7 @@ def processImage(i, files, rscnames, sect, data, beg, rsc_ptr, cover_offset, thu
         if DUMP:
             fname = "unknown%05d.dat" % i
             outname= os.path.join(files.outdir, fname)
-            with open(pathof(outname), 'wb') as f:
+            with fopen(pathof(outname), 'wb') as f:
                 f.write(data)
             sect.setsectiondescription(i,"Mysterious Section, first four bytes %s extracting as %s" % (describe(data[0:4]), fname))
         return rscnames, rsc_ptr
@@ -419,7 +441,7 @@ def processImage(i, files, rscnames, sect, data, beg, rsc_ptr, cover_offset, thu
         imgname = "thumb%05d.%s" % (i, imgtype)
     print("Extracting image: {0:s} from section {1:d}".format(imgname,i))
     outimg = os.path.join(files.imgdir, imgname)
-    with open(pathof(outimg), 'wb') as f:
+    with fopen(pathof(outimg), 'wb') as f:
         f.write(data)
     rscnames.append(imgname)
     sect.setsectiondescription(i,"Image {0:s}".format(imgname))
@@ -434,7 +456,7 @@ def processPrintReplica(metadata, files, rscnames, mh):
     rawML = mh.getRawML()
     if DUMP or WRITE_RAW_DATA:
         outraw = os.path.join(files.outdir,files.getInputFileBasename() + '.rawpr')
-        with open(pathof(outraw),'wb') as f:
+        with fopen(pathof(outraw),'wb') as f:
             f.write(rawML)
 
     fileinfo = []
@@ -453,7 +475,7 @@ def processPrintReplica(metadata, files, rscnames, mh):
                     entryName = os.path.join(files.outdir, files.getInputFileBasename() + ('.%03d.pdf' % (i+1)))
                 else:
                     entryName = os.path.join(files.outdir, files.getInputFileBasename() + ('.%03d.%03d.data' % ((i+1),j)))
-                with open(pathof(entryName), 'wb') as f:
+                with fopen(pathof(entryName), 'wb') as f:
                     f.write(rawML[sectionOffset:(sectionOffset+sectionLength)])
     except Exception as e:
         print('Error processing Print Replica: ' + str(e))
@@ -475,7 +497,7 @@ def processMobi8(mh, metadata, sect, files, rscnames, pagemapproc, k8resc, obfus
     rawML = mh.getRawML()
     if DUMP or WRITE_RAW_DATA:
         outraw = os.path.join(files.k8dir,files.getInputFileBasename() + '.rawml')
-        with open(pathof(outraw),'wb') as f:
+        with fopen(pathof(outraw),'wb') as f:
             f.write(rawML)
 
     # KF8 require other indexes which contain parsing information and the FDST info
@@ -516,7 +538,7 @@ def processMobi8(mh, metadata, sect, files, rscnames, pagemapproc, k8resc, obfus
     if pagemapproc is not None:
         pagemapxml = pagemapproc.generateKF8PageMapXML(k8proc)
         outpm = os.path.join(files.k8oebps,'page-map.xml')
-        with open(pathof(outpm),'wb') as f:
+        with fopen(pathof(outpm),'wb') as f:
             f.write(pagemapxml.encode('utf-8'))
         if DUMP:
             print(pagemapproc.getNames())
@@ -588,7 +610,7 @@ def processMobi8(mh, metadata, sect, files, rscnames, pagemapproc, k8resc, obfus
         [skelnum, dir, filename, beg, end, aidtext] = k8proc.getPartInfo(i)
         fileinfo.append([str(skelnum), dir, filename])
         fname = os.path.join(files.k8oebps,dir,filename)
-        with open(pathof(fname),'wb') as f:
+        with fopen(pathof(fname),'wb') as f:
             f.write(part)
     n = k8proc.getNumberOfFlows()
     for i in range(1, n):
@@ -597,25 +619,32 @@ def processMobi8(mh, metadata, sect, files, rscnames, pagemapproc, k8resc, obfus
         if pformat == b'file':
             fileinfo.append([None, pdir, filename])
             fname = os.path.join(files.k8oebps,pdir,filename)
-            with open(pathof(fname),'wb') as f:
+            with fopen(pathof(fname),'wb') as f:
                 f.write(flowpart)
 
     # create the opf
     opf = OPFProcessor(files, metadata.copy(), fileinfo, rscnames, True, mh, usedmap,
                        pagemapxml=pagemapxml, guidetext=guidetext, k8resc=k8resc, epubver=epubver)
-    uuid = opf.writeOPF(bool(obfuscate_data))
+    if not DRY:
+        uuid = opf.writeOPF(bool(obfuscate_data))
+    else:
+        uuid = opf.BookId if opf.isK8 else 0
 
     if opf.hasNCX():
         # Create a toc.ncx.
-        ncx.writeK8NCX(ncx_data, metadata)
-    if opf.hasNAV():
+        if not DRY:
+            ncx.writeK8NCX(ncx_data, metadata)
+        else:
+            ncx.isNCX = True
+    if opf.hasNAV() and not DRY:
         # Create a navigation document.
         nav = NAVProcessor(files)
         nav.writeNAV(ncx_data, guidetext, metadata)
 
     # make an epub-like structure of it all
     print("Creating an epub-like file")
-    files.makeEPUB(usedmap, obfuscate_data, uuid)
+    if not DRY:
+        files.makeEPUB(usedmap, obfuscate_data, uuid)
 
 
 def processMobi7(mh, metadata, sect, files, rscnames):
@@ -625,14 +654,17 @@ def processMobi7(mh, metadata, sect, files, rscnames):
     rawML = mh.getRawML()
     if DUMP or WRITE_RAW_DATA:
         outraw = os.path.join(files.mobi7dir,files.getInputFileBasename() + '.rawml')
-        with open(pathof(outraw),'wb') as f:
+        with fopen(pathof(outraw),'wb') as f:
             f.write(rawML)
 
     # process the toc ncx
     # ncx map keys: name, pos, len, noffs, text, hlvl, kind, pos_fid, parent, child1, childn, num
     ncx = ncxExtract(mh, files)
     ncx_data = ncx.parseNCX()
-    ncx.writeNCX(metadata)
+    if not DRY:
+        ncx.writeNCX(metadata)
+    else:
+        ncx.isNCX = True
 
     positionMap = {}
 
@@ -655,7 +687,7 @@ def processMobi7(mh, metadata, sect, files, rscnames):
     fname = 'book.html'
     fileinfo.append([None,'', fname])
     outhtml = os.path.join(files.mobi7dir, fname)
-    with open(pathof(outhtml), 'wb') as f:
+    with fopen(pathof(outhtml), 'wb') as f:
         f.write(srctext)
 
     # extract guidetext from srctext
@@ -732,7 +764,7 @@ def processUnknownSections(mh, sect, files, K8Boundary):
                 description = "Unknown INDX section"
                 if DUMP:
                     outname= os.path.join(files.outdir, fname)
-                    with open(pathof(outname), 'wb') as f:
+                    with fopen(pathof(outname), 'wb') as f:
                         f.write(data)
                     print("Extracting %s: %s from section %d" % (description, fname, i))
                     description = description + ", extracting as %s" % fname
@@ -741,7 +773,7 @@ def processUnknownSections(mh, sect, files, K8Boundary):
                 description = "Mysterious Section, first four bytes %s" % describe(data[0:4])
                 if DUMP:
                     outname= os.path.join(files.outdir, fname)
-                    with open(pathof(outname), 'wb') as f:
+                    with fopen(pathof(outname), 'wb') as f:
                         f.write(data)
                     print("Extracting %s: %s from section %d" % (description, fname, i))
                     description = description + ", extracting as %s" % fname
@@ -775,7 +807,7 @@ def process_all_mobi_headers(files, apnxfile, sect, mhlst, K8Boundary, k8only=Fa
 
         if DUMP:
             # write out raw mobi header data
-            with open(pathof(mhname), 'wb') as f:
+            with fopen(pathof(mhname), 'wb') as f:
                 f.write(mh.header)
 
         # process each mobi header
@@ -818,7 +850,7 @@ def process_all_mobi_headers(files, apnxfile, sect, mhlst, K8Boundary, k8only=Fa
                         fname += "_K8"
                     fname += '.dat'
                     outname= os.path.join(files.outdir, fname)
-                    with open(pathof(outname), 'wb') as f:
+                    with fopen(pathof(outname), 'wb') as f:
                         f.write(data)
                     print("Dumping section {0:d} type {1:s} to file {2:s} ".format(i,unicode_str(type),outname))
                 sect.setsectiondescription(i,"Type {0:s}".format(unicode_str(type)))
@@ -873,7 +905,8 @@ def process_all_mobi_headers(files, apnxfile, sect, mhlst, K8Boundary, k8only=Fa
     return
 
 
-def unpackBook(infile, outdir, apnxfile=None, epubver='2', use_hd=False, dodump=False, dowriteraw=False, dosplitcombos=False):
+def unpackBook(infile, outdir, apnxfile=None, epubver='2', use_hd=False, dodump=False, dowriteraw=False, dosplitcombos=False, dry=False):
+    global DRY
     global DUMP
     global WRITE_RAW_DATA
     global SPLIT_COMBO_MOBIS
@@ -889,7 +922,7 @@ def unpackBook(infile, outdir, apnxfile=None, epubver='2', use_hd=False, dodump=
     if apnxfile is not None:
         apnxfile = unicode_str(apnxfile)
 
-    files = fileNames(infile, outdir)
+    files = fileNames(infile, outdir, dry=DRY)
 
     # process the PalmDoc database header and verify it is a mobi
     sect = Sectionizer(infile)
@@ -934,15 +967,15 @@ def unpackBook(infile, outdir, apnxfile=None, epubver='2', use_hd=False, dodump=
                 if mobisplit.combo:
                     outmobi7 = os.path.join(files.outdir, 'mobi7-'+files.getInputFileBasename() + '.mobi')
                     outmobi8 = os.path.join(files.outdir, 'mobi8-'+files.getInputFileBasename() + '.azw3')
-                    with open(pathof(outmobi7), 'wb') as f:
+                    with fopen(pathof(outmobi7), 'wb') as f:
                         f.write(mobisplit.getResult7())
-                    with open(pathof(outmobi8), 'wb') as f:
+                    with fopen(pathof(outmobi8), 'wb') as f:
                         f.write(mobisplit.getResult8())
         else:
             print("Unpacking a Mobipocket {0:d} book...".format(mh.version))
 
     if hasK8:
-        files.makeK8Struct()
+        files.makeK8Struct(dry=DRY)
 
     process_all_mobi_headers(files, apnxfile, sect, mhlst, K8Boundary, False, epubver, use_hd)
 
@@ -968,9 +1001,11 @@ def usage(progname):
     print("                         F (force to fit to epub2 definitions), default is 2")
     print("    -d                 dump headers and other info to output and extra files")
     print("    -r                 write raw data to the output folder")
+    print("    --dry              dry run. no write")
 
 
 def main(argv=unicode_argv()):
+    global DRY
     global DUMP
     global WRITE_RAW_DATA
     global SPLIT_COMBO_MOBIS
@@ -985,7 +1020,7 @@ def main(argv=unicode_argv()):
 
     progname = os.path.basename(argv[0])
     try:
-        opts, args = getopt.getopt(argv[1:], "dhirsp:", ['epub_version='])
+        opts, args = getopt.getopt(argv[1:], "dhirsp:", ['epub_version=', 'dry'])
     except getopt.GetoptError as err:
         print(str(err))
         usage(progname)
@@ -1015,6 +1050,8 @@ def main(argv=unicode_argv()):
             apnxfile = a
         if o == "--epub_version":
             epubver = a
+        if o == "--dry":
+            DRY = True
 
     if len(args) > 1:
         infile, outdir = args
@@ -1029,7 +1066,7 @@ def main(argv=unicode_argv()):
 
     try:
         print('Unpacking Book...')
-        unpackBook(infile, outdir, apnxfile, epubver, use_hd)
+        unpackBook(infile, outdir, apnxfile, epubver, use_hd, dry=DRY)
         print('Completed')
 
     except ValueError as e:
