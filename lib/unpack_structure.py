@@ -35,46 +35,46 @@ class ZipInfo(zipfile.ZipInfo):
 
 class fileNames:
 
-    def __init__(self, infile, outdir):
+    def __init__(self, infile, outdir, dry=False):
         self.infile = infile
         self.outdir = outdir
-        if not unipath.exists(self.outdir):
+        if not unipath.exists(self.outdir) and not dry:
             unipath.mkdir(self.outdir)
         self.mobi7dir = os.path.join(self.outdir,'mobi7')
-        if not unipath.exists(self.mobi7dir):
+        if not unipath.exists(self.mobi7dir) and not dry:
             unipath.mkdir(self.mobi7dir)
         self.imgdir = os.path.join(self.mobi7dir, 'Images')
-        if not unipath.exists(self.imgdir):
+        if not unipath.exists(self.imgdir) and not dry and not dry:
             unipath.mkdir(self.imgdir)
         self.hdimgdir = os.path.join(self.outdir,'HDImages')
-        if not unipath.exists(self.hdimgdir):
+        if not unipath.exists(self.hdimgdir) and not dry:
             unipath.mkdir(self.hdimgdir)
         self.outbase = os.path.join(self.outdir, os.path.splitext(os.path.split(infile)[1])[0])
 
     def getInputFileBasename(self):
         return os.path.splitext(os.path.basename(self.infile))[0]
 
-    def makeK8Struct(self):
+    def makeK8Struct(self, dry=False):
         self.k8dir = os.path.join(self.outdir,'mobi8')
-        if not unipath.exists(self.k8dir):
+        if not unipath.exists(self.k8dir) and not dry:
             unipath.mkdir(self.k8dir)
         self.k8metainf = os.path.join(self.k8dir,'META-INF')
-        if not unipath.exists(self.k8metainf):
+        if not unipath.exists(self.k8metainf) and not dry:
             unipath.mkdir(self.k8metainf)
         self.k8oebps = os.path.join(self.k8dir,'OEBPS')
-        if not unipath.exists(self.k8oebps):
+        if not unipath.exists(self.k8oebps) and not dry:
             unipath.mkdir(self.k8oebps)
         self.k8images = os.path.join(self.k8oebps,'Images')
-        if not unipath.exists(self.k8images):
+        if not unipath.exists(self.k8images) and not dry:
             unipath.mkdir(self.k8images)
         self.k8fonts = os.path.join(self.k8oebps,'Fonts')
-        if not unipath.exists(self.k8fonts):
+        if not unipath.exists(self.k8fonts) and not dry:
             unipath.mkdir(self.k8fonts)
         self.k8styles = os.path.join(self.k8oebps,'Styles')
-        if not unipath.exists(self.k8styles):
+        if not unipath.exists(self.k8styles) and not dry:
             unipath.mkdir(self.k8styles)
         self.k8text = os.path.join(self.k8oebps,'Text')
-        if not unipath.exists(self.k8text):
+        if not unipath.exists(self.k8text) and not dry:
             unipath.mkdir(self.k8text)
 
     # recursive zip creation support routine
