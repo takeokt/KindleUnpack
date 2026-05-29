@@ -782,7 +782,7 @@ def process_all_mobi_headers(files, apnxfile, sect, mhlst, K8Boundary, k8only=Fa
             end = K8Boundary
 
         # Not sure the try/except is necessary, but just in case
-        try: 
+        try:
             thumb_offset = int(metadata.get('ThumbOffset', ['-1'])[0])
         except:
             thumb_offset = None
